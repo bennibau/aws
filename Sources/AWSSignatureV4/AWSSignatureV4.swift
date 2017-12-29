@@ -3,6 +3,7 @@ import Crypto
 import HTTP
 import Foundation
 
+
 public enum AccessControlList: String {
     case privateAccess = "private"
     case publicRead = "public-read"
@@ -57,6 +58,12 @@ public struct AWSSignatureV4 {
         scope: String,
         canonicalHash: String
     ) -> String {
+        print([
+            algorithm,
+            date,
+            scope,
+            canonicalHash
+            ].joined(separator: "\n"))
         return [
             algorithm,
             date,
@@ -72,6 +79,8 @@ public struct AWSSignatureV4 {
         let signingHMAC = try HMAC(.sha256, "aws4_request").authenticate(key: serviceHMAC)
 
         let signature = try HMAC(.sha256, stringToSign).authenticate(key: signingHMAC)
+        print("Signature:\(signature)")
+        print("SignatureHEX:\(signature.hexString)")
         return signature.hexString
     }
 
@@ -93,9 +102,9 @@ public struct AWSSignatureV4 {
         signedHeaders: String
     ) throws -> String {
         let path = try path.percentEncode(allowing: Byte.awsPathAllowed)
-        let query = try query.percentEncode(allowing: Byte.awsQueryAllowed)
-
-        return [
+//        let query = try query.percentEncode(allowing: Byte.awsQueryAllowed)
+        
+        let canonicalRequestString = [
             method.rawValue,
             path,
             query,
@@ -103,7 +112,9 @@ public struct AWSSignatureV4 {
             "",
             signedHeaders,
             payloadHash
-        ].joined(separator: "\n")
+            ].joined(separator: "\n")
+        print("CanonicalRequest: \(canonicalRequestString)")
+        return canonicalRequestString
     }
 
     func dateStamp() -> String {
@@ -150,6 +161,7 @@ extension AWSSignatureV4 {
 }
 
 extension AWSSignatureV4 {
+    
     /**
     Sign a request to be sent to an AWS API.
 
@@ -191,9 +203,9 @@ extension AWSSignatureV4 {
             canonicalHeaders: canonicalHeaders,
             signedHeaders: signedHeaders
         )
-
+        
         let canonicalHash = try Hash.make(.sha256, canonicalRequest).hexString
-
+        
         // Task 2 is the String to Sign
         let stringToSign = getStringToSign(
             algorithm: algorithm,
